@@ -1,0 +1,942 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PearlFWA — Enterprise Healthcare FWA Detection Engine</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        slate: {
+                            850: '#111827',
+                            900: '#0f172a',
+                            950: '#070a12',
+                        },
+                        pearl: {
+                            50: '#f8fafc',
+                            100: '#f1f5f9',
+                            500: '#06b6d4',
+                            600: '#0891b2',
+                            cyan: '#06b6d4',
+                            teal: '#14b8a6',
+                            indigo: '#6366f1',
+                            purple: '#a855f7',
+                            amber: '#f59e0b',
+                            rose: '#f43f5e',
+                            emerald: '#10b981'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        .font-mono {
+            font-family: 'JetBrains Mono', monospace;
+        }
+        /* Custom Scrollbars */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(15, 23, 42, 0.6);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #475569;
+        }
+        /* Pearl Glow Effects */
+        .pearl-glow {
+            box-shadow: 0 0 25px -5px rgba(6, 182, 212, 0.25);
+        }
+        .pearl-glow-rose {
+            box-shadow: 0 0 25px -5px rgba(244, 63, 94, 0.3);
+        }
+        .pearl-glow-emerald {
+            box-shadow: 0 0 25px -5px rgba(16, 185, 129, 0.25);
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col bg-slate-950 text-slate-100 dark:bg-slate-950 dark:text-slate-100 antialiased selection:bg-pearl-cyan selection:text-slate-950">
+
+    <!-- Top Navigation & Global Controls Bar -->
+    <header class="border-b border-slate-800/80 bg-slate-900/90 backdrop-blur-xl sticky top-0 z-50">
+        <div class="max-w-[1700px] mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <!-- Brand Logo -->
+            <div class="flex items-center space-x-3">
+                <div class="h-10 w-10 rounded-xl bg-gradient-to-tr from-pearl-indigo via-pearl-cyan to-pearl-teal flex items-center justify-center text-slate-950 font-black text-xl shadow-lg pearl-glow">
+                    <i class="fa-solid fa-pearl"></i>
+                </div>
+                <div>
+                    <div class="flex items-center gap-2">
+                        <h1 class="font-extrabold text-lg sm:text-xl tracking-tight bg-gradient-to-r from-slate-100 via-cyan-100 to-slate-400 bg-clip-text text-transparent">
+                            PearlFWA
+                        </h1>
+                        <span class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-pearl-cyan/10 border border-pearl-cyan/30 text-pearl-cyan">v4.2-ENTERPRISE</span>
+                    </div>
+                    <p class="text-[11px] text-slate-400 hidden sm:block">Healthcare Fraud, Waste & Abuse Real-Time Intelligent Platform</p>
+                </div>
+            </div>
+
+            <!-- Ingestion Stream Summary Status & Theme Toggle -->
+            <div class="flex items-center space-x-4">
+                <div class="hidden xl:flex items-center space-x-6 text-xs bg-slate-950/80 px-4 py-2 rounded-xl border border-slate-800 font-mono">
+                    <div class="flex items-center gap-2">
+                        <span class="w-2 h-2 rounded-full bg-pearl-emerald animate-pulse"></span>
+                        <span class="text-slate-400">Stream: <strong class="text-slate-200" id="streamStatusText">LIVE (42 msgs/sec)</strong></span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="text-slate-400">Saved: <strong class="text-pearl-emerald font-bold" id="totalSavingsCounter">$1,248,500</strong></span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="text-slate-400">Claims Evaluated: <strong class="text-slate-200" id="claimsProcessedCounter">14,892</strong></span>
+                    </div>
+                </div>
+
+                <!-- Theme Toggle Button -->
+                <button onclick="toggleTheme()" class="p-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition" title="Toggle Light/Dark Theme">
+                    <i class="fa-solid fa-sun text-amber-400 dark:hidden"></i>
+                    <i class="fa-solid fa-moon text-pearl-cyan hidden dark:inline-block"></i>
+                </button>
+
+                <!-- Case CSV Export Button -->
+                <button onclick="exportSIUCasesCSV()" class="px-3.5 py-2 rounded-xl bg-pearl-indigo/20 hover:bg-pearl-indigo/30 border border-pearl-indigo/40 text-pearl-indigo text-xs font-semibold transition flex items-center gap-2">
+                    <i class="fa-solid fa-file-csv text-sm"></i> Export SIU Cases
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Enterprise Dashboard Layout -->
+    <main class="flex-1 max-w-[1700px] w-full mx-auto p-4 sm:p-6 lg:p-8 space-y-6">
+
+        <!-- Banner Controls & Scenario Quick Loaders -->
+        <section class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-2xl">
+            <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                <div>
+                    <span class="text-xs font-bold text-pearl-cyan uppercase tracking-wider block mb-1">
+                        <i class="fa-solid fa-sliders text-pearl-cyan mr-1.5"></i> Interactive Controls & Attack Scenarios
+                    </span>
+                    <p class="text-xs text-slate-400">Inject billing patterns or fine-tune scoring risk thresholds dynamically.</p>
+                </div>
+
+                <div class="flex flex-wrap items-center gap-2">
+                    <button onclick="loadPearlPreset('normal')" class="preset-btn px-3 py-1.5 text-xs font-medium rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 transition flex items-center gap-1.5">
+                        <i class="fa-solid fa-circle-check text-pearl-emerald"></i> Baseline Clean Claim
+                    </button>
+                    <button onclick="loadPearlPreset('upcoding')" class="preset-btn px-3 py-1.5 text-xs font-medium rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 transition flex items-center gap-1.5">
+                        <i class="fa-solid fa-chart-line text-pearl-amber"></i> Upcoding (CPT 99215)
+                    </button>
+                    <button onclick="loadPearlPreset('unbundled')" class="preset-btn px-3 py-1.5 text-xs font-medium rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 transition flex items-center gap-1.5">
+                        <i class="fa-solid fa-scissors text-pearl-indigo"></i> Unbundling (CPT 95907 + 95904)
+                    </button>
+                    <button onclick="loadPearlPreset('phantom')" class="preset-btn px-3 py-1.5 text-xs font-medium rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 transition flex items-center gap-1.5">
+                        <i class="fa-solid fa-ghost text-pearl-rose"></i> Phantom Billing (Impossible Hours)
+                    </button>
+                    <button onclick="loadPearlPreset('collusion')" class="preset-btn px-3 py-1.5 text-xs font-medium rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 transition flex items-center gap-1.5">
+                        <i class="fa-solid fa-circle-nodes text-pearl-purple"></i> Collusion Ring (Kickbacks)
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- 3-Column Grid Workspace -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+            <!-- LEFT COLUMN: Claims Input Workbench & Real-Time Stream (4 Cols) -->
+            <div class="lg:col-span-4 space-y-6">
+
+                <!-- 1. Claims Payload Workbench Form -->
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl">
+                    <div class="flex items-center justify-between pb-3 border-b border-slate-800 mb-4">
+                        <h2 class="font-bold text-sm text-slate-100 flex items-center gap-2">
+                            <i class="fa-solid fa-file-invoice-dollar text-pearl-cyan"></i> Claims Payload Editor (EDI 837P)
+                        </h2>
+                        <span class="text-[10px] text-slate-400 font-mono">SYNTHETIC FHIR JSON</span>
+                    </div>
+
+                    <form id="pearlClaimsForm" class="space-y-3.5">
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-[11px] font-medium text-slate-400 mb-1">Provider NPI</label>
+                                <input type="text" id="providerNpi" value="1992837401" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs font-mono text-slate-200 focus:outline-none focus:border-pearl-cyan transition">
+                            </div>
+                            <div>
+                                <label class="block text-[11px] font-medium text-slate-400 mb-1">Specialty</label>
+                                <select id="specialty" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-pearl-cyan transition">
+                                    <option value="Dermatology">Dermatology</option>
+                                    <option value="Internal Medicine">Internal Medicine</option>
+                                    <option value="Neurology">Neurology</option>
+                                    <option value="Orthopedics">Orthopedics</option>
+                                    <option value="Pain Management">Pain Management</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-[11px] font-medium text-slate-400 mb-1">Primary CPT Code</label>
+                                <input type="text" id="cptCode" value="99213" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs font-mono text-slate-200 focus:outline-none focus:border-pearl-cyan transition">
+                            </div>
+                            <div>
+                                <label class="block text-[11px] font-medium text-slate-400 mb-1">Billed Amount ($)</label>
+                                <input type="number" id="billedAmount" value="145.00" step="0.01" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs font-mono text-slate-200 focus:outline-none focus:border-pearl-cyan transition">
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-[11px] font-medium text-slate-400 mb-1">CPT Modifiers</label>
+                                <input type="text" id="modifiers" value="25" placeholder="e.g. 25, 59" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs font-mono text-slate-200 focus:outline-none focus:border-pearl-cyan transition">
+                            </div>
+                            <div>
+                                <label class="block text-[11px] font-medium text-slate-400 mb-1">Billed Daily Hours</label>
+                                <input type="number" id="billedHours" value="7.5" step="0.5" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs font-mono text-slate-200 focus:outline-none focus:border-pearl-cyan transition">
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-[11px] font-medium text-slate-400 mb-1">Patient ID</label>
+                                <input type="text" id="patientId" value="MEM-55102" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs font-mono text-slate-200 focus:outline-none focus:border-pearl-cyan transition">
+                            </div>
+                            <div>
+                                <label class="block text-[11px] font-medium text-slate-400 mb-1">Fulfilling Pharmacy ID</label>
+                                <input type="text" id="pharmacyId" value="PHARM-LOCAL-01" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs font-mono text-slate-200 focus:outline-none focus:border-pearl-cyan transition">
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-[11px] font-medium text-slate-400 mb-1">Secondary Procedure / CPT Line 2</label>
+                            <input type="text" id="secondaryCpt" value="" placeholder="e.g. 95904 (Sensory Nerve Study)" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs font-mono text-slate-200 focus:outline-none focus:border-pearl-cyan transition">
+                        </div>
+
+                        <button type="button" onclick="runPearlDetectionPipeline()" class="w-full py-3 px-4 bg-gradient-to-r from-pearl-cyan via-pearl-teal to-pearl-indigo hover:opacity-95 text-slate-950 font-bold rounded-xl shadow-lg transition flex items-center justify-center space-x-2 text-xs tracking-wider uppercase pearl-glow">
+                            <i class="fa-solid fa-microchip text-sm"></i>
+                            <span>Evaluate Claim Payload</span>
+                        </button>
+                    </form>
+                </div>
+
+                <!-- 2. Customizable Sensitivity Threshold Controls -->
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl space-y-4">
+                    <div class="flex items-center justify-between pb-2 border-b border-slate-800">
+                        <h3 class="text-xs font-bold text-slate-200 flex items-center gap-2">
+                            <i class="fa-solid fa-sliders text-pearl-amber"></i> Dynamic Engine Risk Sensitivity
+                        </h3>
+                        <span class="text-[10px] text-slate-400 font-mono">REAL-TIME ADJUST</span>
+                    </div>
+
+                    <!-- Pre-Pay Threshold -->
+                    <div class="space-y-1">
+                        <div class="flex justify-between text-xs">
+                            <span class="text-slate-400">Rules Engine Strictness</span>
+                            <span id="rulesStrictnessVal" class="font-mono text-pearl-cyan">Medium (70%)</span>
+                        </div>
+                        <input type="range" id="rulesSensitivity" min="1" max="100" value="70" oninput="updateSensitivityLabels()" class="w-full accent-pearl-cyan bg-slate-950 rounded-lg h-1.5 cursor-pointer">
+                    </div>
+
+                    <!-- ML Outlier Sensitivity -->
+                    <div class="space-y-1">
+                        <div class="flex justify-between text-xs">
+                            <span class="text-slate-400">ML Z-Score Sensitivity</span>
+                            <span id="mlStrictnessVal" class="font-mono text-pearl-indigo">Standard (2.5σ)</span>
+                        </div>
+                        <input type="range" id="mlSensitivity" min="1" max="100" value="50" oninput="updateSensitivityLabels()" class="w-full accent-pearl-indigo bg-slate-950 rounded-lg h-1.5 cursor-pointer">
+                    </div>
+
+                    <!-- Graph Network Threshold -->
+                    <div class="space-y-1">
+                        <div class="flex justify-between text-xs">
+                            <span class="text-slate-400">Graph Ring Density Limit</span>
+                            <span id="graphStrictnessVal" class="font-mono text-pearl-purple">> 4 Shared Pts</span>
+                        </div>
+                        <input type="range" id="graphSensitivity" min="1" max="100" value="60" oninput="updateSensitivityLabels()" class="w-full accent-pearl-purple bg-slate-950 rounded-lg h-1.5 cursor-pointer">
+                    </div>
+                </div>
+
+                <!-- 3. Live Streaming Claims Payload Ticker -->
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-xl">
+                    <div class="flex items-center justify-between pb-2 border-b border-slate-800 mb-3">
+                        <h3 class="text-xs font-bold text-slate-200 flex items-center gap-2">
+                            <i class="fa-solid fa-satellite-dish text-pearl-emerald"></i> Live Ingestion Feed
+                        </h3>
+                        <div class="flex items-center gap-1.5">
+                            <button onclick="toggleStream()" id="streamToggleBtn" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-[10px] font-mono rounded text-slate-300">PAUSE</button>
+                        </div>
+                    </div>
+                    <div id="streamTicker" class="h-32 bg-slate-950 rounded-lg p-2.5 font-mono text-[11px] overflow-y-auto space-y-1 border border-slate-800">
+                        <!-- Streaming claims injected via JS -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- MIDDLE & RIGHT COLUMN: Engine Scoring, SHAP, Interactive Graph & Case Workbench (8 Cols) -->
+            <div class="lg:col-span-8 space-y-6">
+
+                <!-- 1. Pipeline Stages Visualizer -->
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl">
+                    <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4">
+                        <i class="fa-solid fa-network-wired text-pearl-cyan mr-1.5"></i> End-to-End Pipeline Stages
+                    </h3>
+                    
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                        <div id="step-prepay" class="bg-slate-950 border border-slate-800 p-3 rounded-xl flex flex-col items-center text-center transition">
+                            <div class="w-8 h-8 rounded-full bg-slate-800 text-slate-400 flex items-center justify-center text-xs mb-2">
+                                <i class="fa-solid fa-filter"></i>
+                            </div>
+                            <span class="text-[11px] font-bold text-slate-300">1. Pre-Pay Gate</span>
+                            <span id="step-prepay-status" class="text-[10px] font-mono text-slate-500 mt-1">Pending</span>
+                        </div>
+                        <div id="step-rules" class="bg-slate-950 border border-slate-800 p-3 rounded-xl flex flex-col items-center text-center transition">
+                            <div class="w-8 h-8 rounded-full bg-slate-800 text-slate-400 flex items-center justify-center text-xs mb-2">
+                                <i class="fa-solid fa-gavel"></i>
+                            </div>
+                            <span class="text-[11px] font-bold text-slate-300">2. Rules Engine</span>
+                            <span id="step-rules-status" class="text-[10px] font-mono text-slate-500 mt-1">Pending</span>
+                        </div>
+                        <div id="step-ml" class="bg-slate-950 border border-slate-800 p-3 rounded-xl flex flex-col items-center text-center transition">
+                            <div class="w-8 h-8 rounded-full bg-slate-800 text-slate-400 flex items-center justify-center text-xs mb-2">
+                                <i class="fa-solid fa-brain"></i>
+                            </div>
+                            <span class="text-[11px] font-bold text-slate-300">3. ML Z-Score Isolation</span>
+                            <span id="step-ml-status" class="text-[10px] font-mono text-slate-500 mt-1">Pending</span>
+                        </div>
+                        <div id="step-graph" class="bg-slate-950 border border-slate-800 p-3 rounded-xl flex flex-col items-center text-center transition">
+                            <div class="w-8 h-8 rounded-full bg-slate-800 text-slate-400 flex items-center justify-center text-xs mb-2">
+                                <i class="fa-solid fa-diagram-project"></i>
+                            </div>
+                            <span class="text-[11px] font-bold text-slate-300">4. Graph Collusion</span>
+                            <span id="step-graph-status" class="text-[10px] font-mono text-slate-500 mt-1">Pending</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 2. Risk Score Gauge & SHAP Explainable AI Panel -->
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
+                    
+                    <!-- Circular Score Index Gauge -->
+                    <div class="md:col-span-5 flex flex-col items-center justify-center border-b md:border-b-0 md:border-r border-slate-800 pb-4 md:pb-0 md:pr-4">
+                        <span class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Pearl Risk Score</span>
+                        
+                        <div class="relative w-40 h-40 flex items-center justify-center">
+                            <svg class="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
+                                <path stroke-dasharray="100, 100" class="text-slate-800" stroke-width="3.5" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                                <path id="gaugeProgress" stroke-dasharray="0, 100" class="text-pearl-emerald transition-all duration-1000 ease-out" stroke-width="3.5" stroke-linecap="round" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                            </svg>
+                            <div class="absolute flex flex-col items-center justify-center text-center">
+                                <span id="riskScoreValue" class="text-4xl font-black font-mono text-slate-100">12</span>
+                                <span id="riskScoreLabel" class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-500/10 text-pearl-emerald border border-emerald-500/30 mt-1">LOW RISK</span>
+                            </div>
+                        </div>
+
+                        <div id="recommendationBadge" class="mt-4 text-xs font-mono font-medium text-slate-300 bg-slate-950 px-3.5 py-2 rounded-xl border border-slate-800 text-center">
+                            RECOMMENDATION: Auto-Approve & Pay
+                        </div>
+                    </div>
+
+                    <!-- SHAP Feature Attribution Bars -->
+                    <div class="md:col-span-7 space-y-3">
+                        <div class="flex items-center justify-between">
+                            <h4 class="text-xs font-bold text-slate-200 flex items-center gap-1.5">
+                                <i class="fa-solid fa-wand-magic-sparkles text-pearl-indigo"></i> SHAP Explainable AI Attribution
+                            </h4>
+                            <span class="text-[10px] text-slate-500 font-mono">RISK WEIGHTING</span>
+                        </div>
+
+                        <div id="shapBars" class="space-y-3 text-xs">
+                            <div class="text-slate-500 text-xs italic">Run evaluation to compute risk feature contributions...</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 3. Neo4j Interactive HTML5 Canvas Graph Visualizer -->
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
+                        <div>
+                            <h3 class="text-xs font-bold text-slate-200 flex items-center gap-2">
+                                <i class="fa-solid fa-diagram-project text-pearl-purple"></i> Interactive Graph Discovery (Neo4j Topology)
+                            </h3>
+                            <p class="text-[11px] text-slate-400">Drag nodes to inspect patient-sharing rings, physician NPIs, and pharmacy kickbacks.</p>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <span id="graphRiskTag" class="text-[10px] font-mono px-2 py-1 rounded bg-slate-800 text-slate-400 border border-slate-700">
+                                Topology: Normal Network
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Interactive Canvas Element -->
+                    <div class="relative w-full h-72 bg-slate-950 rounded-xl border border-slate-800 overflow-hidden cursor-crosshair">
+                        <canvas id="graphCanvas" class="w-full h-full"></canvas>
+                        
+                        <!-- Graph Legend -->
+                        <div class="absolute bottom-3 left-3 bg-slate-900/90 backdrop-blur border border-slate-800 px-3 py-1.5 rounded-lg text-[10px] flex items-center space-x-3 text-slate-400 shadow-lg">
+                            <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-pearl-cyan inline-block"></span> Provider</span>
+                            <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-pearl-emerald inline-block"></span> Patient</span>
+                            <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-pearl-purple inline-block"></span> Pharmacy</span>
+                        </div>
+
+                        <div class="absolute top-3 right-3 text-[10px] font-mono text-slate-500 bg-slate-900/80 px-2 py-1 rounded border border-slate-800">
+                            Click & Drag Nodes
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 4. Special Investigation Unit (SIU) Case Log & Action Workbench -->
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl space-y-4">
+                    <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+                        <h3 class="text-xs font-bold text-slate-200 flex items-center gap-2">
+                            <i class="fa-solid fa-user-shield text-pearl-amber"></i> SIU Case Management Workbench
+                        </h3>
+                        <span class="text-[10px] text-slate-400 font-mono" id="flaggedCasesCount">Active Flagged Cases: 0</span>
+                    </div>
+
+                    <!-- SIU Action Buttons -->
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <button onclick="executeSIUAction('approve')" class="py-3 px-3 bg-slate-800 hover:bg-emerald-950/60 border border-slate-700 hover:border-pearl-emerald text-slate-200 hover:text-pearl-emerald rounded-xl text-xs font-bold transition flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-circle-check"></i> Approve Claim
+                        </button>
+                        <button onclick="executeSIUAction('audit')" class="py-3 px-3 bg-slate-800 hover:bg-amber-950/60 border border-slate-700 hover:border-pearl-amber text-slate-200 hover:text-pearl-amber rounded-xl text-xs font-bold transition flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-file-signature"></i> Request Records Audit
+                        </button>
+                        <button onclick="executeSIUAction('freeze')" class="py-3 px-3 bg-slate-800 hover:bg-rose-950/60 border border-slate-700 hover:border-pearl-rose text-slate-200 hover:text-pearl-rose rounded-xl text-xs font-bold transition flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-lock"></i> Freeze & Refer to LE
+                        </button>
+                    </div>
+
+                    <!-- Active Flagged SIU Cases Table -->
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-xs">
+                            <thead class="bg-slate-950 text-slate-400 font-mono text-[10px] uppercase border-b border-slate-800">
+                                <tr>
+                                    <th class="py-2.5 px-3">Case ID</th>
+                                    <th class="py-2.5 px-3">Provider NPI</th>
+                                    <th class="py-2.5 px-3">CPT Code</th>
+                                    <th class="py-2.5 px-3">Exposure</th>
+                                    <th class="py-2.5 px-3">Risk Score</th>
+                                    <th class="py-2.5 px-3">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="siuCasesTable" class="divide-y divide-slate-800/60 text-slate-300 font-mono">
+                                <tr>
+                                    <td colspan="6" class="py-4 text-center text-slate-500 italic">No FWA cases flagged in active queue yet. Evaluate a claim above to generate cases.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="border-t border-slate-800 bg-slate-900/60 py-4 mt-8 text-center text-xs text-slate-500 font-mono">
+        PearlFWA Enterprise Architecture • System Blueprint Inspired by Jensen Loke Methodologies
+    </footer>
+
+    <!-- JavaScript Logic, Interactive Graph & Engine Algorithms -->
+    <script>
+        // Preset Scenarios
+        const PEARL_PRESETS = {
+            normal: {
+                npi: "1992837401",
+                specialty: "Dermatology",
+                cpt: "99213",
+                billed: 145.00,
+                modifiers: "25",
+                hours: 7.5,
+                patient: "MEM-55102",
+                pharmacy: "PHARM-LOCAL-01",
+                secondaryCpt: ""
+            },
+            upcoding: {
+                npi: "1447281920",
+                specialty: "Dermatology",
+                cpt: "99215",
+                billed: 490.00,
+                modifiers: "25",
+                hours: 8.5,
+                patient: "MEM-88219",
+                pharmacy: "PHARM-LOCAL-02",
+                secondaryCpt: ""
+            },
+            unbundled: {
+                npi: "1882930112",
+                specialty: "Neurology",
+                cpt: "95907",
+                billed: 680.00,
+                modifiers: "59",
+                hours: 6.0,
+                patient: "MEM-33104",
+                pharmacy: "PHARM-LOCAL-01",
+                secondaryCpt: "95904"
+            },
+            phantom: {
+                npi: "1772639104",
+                specialty: "Pain Management",
+                cpt: "99214",
+                billed: 3400.00,
+                modifiers: "25",
+                hours: 28.5, // >24 hours per day
+                patient: "MEM-11928",
+                pharmacy: "PHARM-LOCAL-03",
+                secondaryCpt: ""
+            },
+            collusion: {
+                npi: "1002938192",
+                specialty: "Internal Medicine",
+                cpt: "99214",
+                billed: 950.00,
+                modifiers: "",
+                hours: 11.0,
+                patient: "MEM-55102",
+                pharmacy: "PHARM-RING-SUSPECT",
+                secondaryCpt: ""
+            }
+        };
+
+        // Engine State
+        let flaggedCases = [];
+        let isStreamRunning = true;
+        let streamInterval = null;
+        let currentGraphMode = 'normal';
+
+        // Interactive Graph Variables
+        let canvas, ctx;
+        let graphNodes = [];
+        let graphEdges = [];
+        let draggedNode = null;
+
+        window.onload = function() {
+            initGraphCanvas();
+            startClaimsStream();
+            updateSensitivityLabels();
+            renderGraph('normal');
+        };
+
+        // Theme Toggle Function
+        function toggleTheme() {
+            document.documentElement.classList.toggle('dark');
+        }
+
+        // Preset Loader
+        function loadPearlPreset(key) {
+            const data = PEARL_PRESETS[key];
+            if (!data) return;
+
+            document.getElementById('providerNpi').value = data.npi;
+            document.getElementById('specialty').value = data.specialty;
+            document.getElementById('cptCode').value = data.cpt;
+            document.getElementById('billedAmount').value = data.billed.toFixed(2);
+            document.getElementById('modifiers').value = data.modifiers;
+            document.getElementById('billedHours').value = data.hours;
+            document.getElementById('patientId').value = data.patient;
+            document.getElementById('pharmacyId').value = data.pharmacy;
+            document.getElementById('secondaryCpt').value = data.secondaryCpt;
+
+            runPearlDetectionPipeline();
+        }
+
+        // Dynamic Sensitivity Slider Updates
+        function updateSensitivityLabels() {
+            const rVal = parseInt(document.getElementById('rulesSensitivity').value);
+            const mVal = parseInt(document.getElementById('mlSensitivity').value);
+            const gVal = parseInt(document.getElementById('graphSensitivity').value);
+
+            document.getElementById('rulesStrictnessVal').textContent = rVal > 75 ? 'Strict (90%)' : rVal > 40 ? 'Medium (70%)' : 'Relaxed (40%)';
+            document.getElementById('mlStrictnessVal').textContent = mVal > 75 ? 'High (1.8σ)' : mVal > 40 ? 'Standard (2.5σ)' : 'Low (3.2σ)';
+            document.getElementById('graphStrictnessVal').textContent = gVal > 75 ? '> 2 Shared Pts' : gVal > 40 ? '> 4 Shared Pts' : '> 8 Shared Pts';
+        }
+
+        // Pipeline Evaluator Engine
+        function runPearlDetectionPipeline() {
+            const npi = document.getElementById('providerNpi').value;
+            const specialty = document.getElementById('specialty').value;
+            const cpt = document.getElementById('cptCode').value;
+            const billed = parseFloat(document.getElementById('billedAmount').value) || 0;
+            const hours = parseFloat(document.getElementById('billedHours').value) || 0;
+            const pharmacy = document.getElementById('pharmacyId').value;
+            const secondaryCpt = document.getElementById('secondaryCpt').value;
+
+            // Sensitivity multipliers
+            const rMult = parseInt(document.getElementById('rulesSensitivity').value) / 50;
+            const mMult = parseInt(document.getElementById('mlSensitivity').value) / 50;
+
+            resetPipelineSteps();
+
+            let totalScore = 0;
+            let shapAttributions = [];
+
+            // 1. Pre-Pay Check
+            setTimeout(() => {
+                updateStepUI('step-prepay', 'PASS', 'success');
+            }, 150);
+
+            // 2. Rules Engine
+            setTimeout(() => {
+                if (hours > 24) {
+                    const pts = Math.round(45 * rMult);
+                    totalScore += pts;
+                    shapAttributions.push({ feature: 'Phantom Hours (>24h in 1 Calendar Day)', impact: `+${pts} pts`, level: 'rose' });
+                } else if (hours > 12) {
+                    const pts = Math.round(18 * rMult);
+                    totalScore += pts;
+                    shapAttributions.push({ feature: 'Excessive Daily Billed Hours (>12h)', impact: `+${pts} pts`, level: 'amber' });
+                }
+
+                if ((cpt === '95907' && secondaryCpt === '95904') || (cpt === '95904' && secondaryCpt === '95907')) {
+                    const pts = Math.round(35 * rMult);
+                    totalScore += pts;
+                    shapAttributions.push({ feature: 'Unbundling Violation (Nerve Conduction Pair)', impact: `+${pts} pts`, level: 'rose' });
+                }
+
+                updateStepUI('step-rules', totalScore > 0 ? 'RULES TRIGGERED' : 'CLEAN', totalScore > 0 ? 'warn' : 'success');
+            }, 300);
+
+            // 3. ML Outlier Isolation
+            setTimeout(() => {
+                if (cpt === '99215' && specialty === 'Dermatology') {
+                    const pts = Math.round(38 * mMult);
+                    totalScore += pts;
+                    shapAttributions.push({ feature: 'Upcoding Outlier: Level 5 E/M vs Specialty Peer Baseline', impact: `+${pts} pts`, level: 'rose' });
+                } else if (billed > 1200 && !cpt.startsWith('95')) {
+                    const pts = Math.round(22 * mMult);
+                    totalScore += pts;
+                    shapAttributions.push({ feature: 'Billed Fee Outlier (Z-Score > 3.1 vs Local Median)', impact: `+${pts} pts`, level: 'amber' });
+                }
+
+                updateStepUI('step-ml', totalScore > 20 ? 'ANOMALY DETECTED' : 'NORMAL', totalScore > 20 ? 'warn' : 'success');
+            }, 450);
+
+            // 4. Graph Discovery
+            setTimeout(() => {
+                let isCollusion = false;
+                if (pharmacy.includes('RING') || pharmacy.includes('SUSPECT') || npi === '1002938192') {
+                    isCollusion = true;
+                    const pts = 35;
+                    totalScore += pts;
+                    shapAttributions.push({ feature: 'Collusion Network Ring (High-Density Kickbacks)', impact: `+${pts} pts`, level: 'purple' });
+                }
+
+                updateStepUI('step-graph', isCollusion ? 'RING DETECTED' : 'NO RING', isCollusion ? 'danger' : 'success');
+                
+                currentGraphMode = isCollusion ? 'kickback' : 'normal';
+                renderGraph(currentGraphMode);
+
+                renderGaugeAndSHAP(totalScore, shapAttributions, { npi, cpt, billed });
+            }, 600);
+        }
+
+        // Render Score Gauge and Case Record Insertion
+        function renderGaugeAndSHAP(score, factors, claimInfo) {
+            score = Math.min(100, Math.max(6, score));
+            
+            document.getElementById('riskScoreValue').textContent = score;
+            const gauge = document.getElementById('gaugeProgress');
+            const label = document.getElementById('riskScoreLabel');
+            const rec = document.getElementById('recommendationBadge');
+
+            gauge.setAttribute('stroke-dasharray', `${score}, 100`);
+
+            let statusStr = 'CLEAN';
+            if (score < 40) {
+                gauge.setAttribute('class', 'text-pearl-emerald transition-all duration-1000 ease-out');
+                label.textContent = 'LOW RISK';
+                label.className = 'text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-500/10 text-pearl-emerald border border-emerald-500/30 mt-1';
+                rec.textContent = 'RECOMMENDATION: Auto-Approve & Pay';
+                rec.className = 'mt-4 text-xs font-mono font-medium text-pearl-emerald bg-emerald-950/40 px-3.5 py-2 rounded-xl border border-emerald-800/60 text-center';
+            } else if (score < 75) {
+                gauge.setAttribute('class', 'text-pearl-amber transition-all duration-1000 ease-out');
+                label.textContent = 'AUDIT RECOMMENDED';
+                label.className = 'text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-500/10 text-pearl-amber border border-amber-500/30 mt-1';
+                rec.textContent = 'RECOMMENDATION: Request Medical Records';
+                rec.className = 'mt-4 text-xs font-mono font-medium text-pearl-amber bg-amber-950/40 px-3.5 py-2 rounded-xl border border-amber-800/60 text-center';
+                statusStr = 'AUDIT_PENDING';
+                addSIUCase(claimInfo.npi, claimInfo.cpt, claimInfo.billed, score, statusStr);
+            } else {
+                gauge.setAttribute('class', 'text-pearl-rose transition-all duration-1000 ease-out');
+                label.textContent = 'HIGH FWA RISK';
+                label.className = 'text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-rose-500/10 text-pearl-rose border border-rose-500/30 mt-1';
+                rec.textContent = 'RECOMMENDATION: Freeze Payment & Open SIU Dossier';
+                rec.className = 'mt-4 text-xs font-mono font-medium text-pearl-rose bg-rose-950/40 px-3.5 py-2 rounded-xl border border-rose-800/60 text-center';
+                statusStr = 'PAYMENT_FROZEN';
+                addSIUCase(claimInfo.npi, claimInfo.cpt, claimInfo.billed, score, statusStr);
+            }
+
+            // SHAP Bars
+            const shapContainer = document.getElementById('shapBars');
+            if (factors.length === 0) {
+                shapContainer.innerHTML = `
+                    <div class="p-3 bg-slate-950 rounded-xl border border-slate-800 text-slate-400 text-xs">
+                        <i class="fa-solid fa-shield text-pearl-emerald mr-1.5"></i> Claim parameters conform with regional peer baselines. Zero anomaly points.
+                    </div>
+                `;
+            } else {
+                shapContainer.innerHTML = factors.map(f => `
+                    <div class="space-y-1">
+                        <div class="flex justify-between text-[11px]">
+                            <span class="text-slate-300 font-medium">${f.feature}</span>
+                            <span class="font-mono text-pearl-${f.level} font-bold">${f.impact}</span>
+                        </div>
+                        <div class="w-full bg-slate-950 rounded-full h-1.5 border border-slate-800 overflow-hidden">
+                            <div class="bg-gradient-to-r from-pearl-amber to-pearl-rose h-1.5 rounded-full" style="width: ${parseInt(f.impact) * 2.2}%"></div>
+                        </div>
+                    </div>
+                `).join('');
+            }
+        }
+
+        function addSIUCase(npi, cpt, billed, score, status) {
+            const caseId = 'CASE-' + Math.floor(100000 + Math.random() * 900000);
+            flaggedCases.unshift({ caseId, npi, cpt, billed, score, status, date: new Date().toISOString() });
+            updateSIUCasesTable();
+        }
+
+        function updateSIUCasesTable() {
+            const tbody = document.getElementById('siuCasesTable');
+            document.getElementById('flaggedCasesCount').textContent = `Active Flagged Cases: ${flaggedCases.length}`;
+
+            if (flaggedCases.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="py-4 text-center text-slate-500 italic">No FWA cases flagged in active queue yet.</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = flaggedCases.slice(0, 5).map(c => `
+                <tr class="hover:bg-slate-800/40 transition">
+                    <td class="py-2.5 px-3 text-pearl-cyan font-bold">${c.caseId}</td>
+                    <td class="py-2.5 px-3">${c.npi}</td>
+                    <td class="py-2.5 px-3">${c.cpt}</td>
+                    <td class="py-2.5 px-3 text-slate-200">$${c.billed.toFixed(2)}</td>
+                    <td class="py-2.5 px-3 font-bold ${c.score > 70 ? 'text-pearl-rose' : 'text-pearl-amber'}">${c.score}/100</td>
+                    <td class="py-2.5 px-3">
+                        <span class="text-[9px] font-bold px-2 py-0.5 rounded-full ${c.status === 'PAYMENT_FROZEN' ? 'bg-rose-500/10 text-pearl-rose border border-rose-500/30' : 'bg-amber-500/10 text-pearl-amber border border-amber-500/30'}">
+                            ${c.status}
+                        </span>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function executeSIUAction(action) {
+            if (flaggedCases.length === 0) {
+                alert('No active flagged cases to apply SIU workflow action.');
+                return;
+            }
+            const targetCase = flaggedCases[0];
+            if (action === 'approve') {
+                targetCase.status = 'APPROVED_BY_AUDITOR';
+                alert(`Case ${targetCase.caseId} manually approved for payout.`);
+            } else if (action === 'audit') {
+                targetCase.status = 'AUDIT_NOTICE_SENT';
+                alert(`Formal Medical Records Audit Request issued for Case ${targetCase.caseId}.`);
+            } else if (action === 'freeze') {
+                targetCase.status = 'SIU_LEGAL_FROZEN';
+                alert(`Payment frozen. Case ${targetCase.caseId} dossier submitted to Healthcare Enforcement.`);
+            }
+            updateSIUCasesTable();
+        }
+
+        // CSV Case Dossier Exporter
+        function exportSIUCasesCSV() {
+            if (flaggedCases.length === 0) {
+                alert('No SIU cases available to export. Run a claim evaluation first.');
+                return;
+            }
+
+            let csvContent = "data:text/csv;charset=utf-8,CaseID,NPI,CPT,BilledAmount,RiskScore,Status,Timestamp\n";
+            flaggedCases.forEach(c => {
+                csvContent += `${c.caseId},${c.npi},${c.cpt},${c.billed},${c.score},${c.status},${c.date}\n`;
+            });
+
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", `PearlFWA_SIU_Cases_${Date.now()}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        // Live Streaming Claims Ticker Simulator
+        function startClaimsStream() {
+            const ticker = document.getElementById('streamTicker');
+            const sampleNpis = ['1992837401', '1447281920', '1882930112', '1772639104', '1002938192'];
+            const sampleCpts = ['99213', '99214', '99215', '95907', '99204'];
+
+            streamInterval = setInterval(() => {
+                if (!isStreamRunning) return;
+                const npi = sampleNpis[Math.floor(Math.random() * sampleNpis.length)];
+                const cpt = sampleCpts[Math.floor(Math.random() * sampleCpts.length)];
+                const amt = (Math.random() * 400 + 80).toFixed(2);
+                const time = new Date().toLocaleTimeString();
+
+                const div = document.createElement('div');
+                div.className = 'text-slate-400 border-b border-slate-900 pb-1 flex justify-between items-center';
+                div.innerHTML = `<span><span class="text-slate-600">[${time}]</span> <strong class="text-slate-300">NPI:${npi}</strong> billed CPT ${cpt}</span> <span class="text-pearl-emerald font-bold">$${amt}</span>`;
+
+                ticker.prepend(div);
+                if (ticker.children.length > 20) ticker.removeChild(ticker.lastChild);
+            }, 1200);
+        }
+
+        function toggleStream() {
+            isStreamRunning = !isStreamRunning;
+            document.getElementById('streamToggleBtn').textContent = isStreamRunning ? 'PAUSE' : 'RESUME';
+            document.getElementById('streamStatusText').textContent = isStreamRunning ? 'LIVE (42 msgs/sec)' : 'PAUSED';
+        }
+
+        // Pipeline Step UI Helper
+        function resetPipelineSteps() {
+            ['step-prepay', 'step-rules', 'step-ml', 'step-graph'].forEach(id => {
+                document.getElementById(`${id}-status`).textContent = 'Evaluating...';
+                document.getElementById(`${id}-status`).className = 'text-[10px] font-mono text-pearl-cyan animate-pulse mt-1';
+            });
+        }
+
+        function updateStepUI(id, text, state) {
+            const status = document.getElementById(`${id}-status`);
+            status.textContent = text;
+            status.classList.remove('animate-pulse');
+
+            if (state === 'success') status.className = 'text-[10px] font-mono text-pearl-emerald font-bold mt-1';
+            if (state === 'warn') status.className = 'text-[10px] font-mono text-pearl-amber font-bold mt-1';
+            if (state === 'danger') status.className = 'text-[10px] font-mono text-pearl-rose font-bold mt-1';
+        }
+
+        // HTML5 Canvas Interactive Graph Engine (With Drag & Drop)
+        function initGraphCanvas() {
+            canvas = document.getElementById('graphCanvas');
+            ctx = canvas.getContext('2d');
+
+            function resizeCanvas() {
+                canvas.width = canvas.offsetWidth;
+                canvas.height = canvas.offsetHeight;
+                renderGraph(currentGraphMode);
+            }
+            resizeCanvas();
+            window.addEventListener('resize', resizeCanvas);
+
+            // Drag Events
+            canvas.addEventListener('mousedown', (e) => {
+                const rect = canvas.getBoundingClientRect();
+                const mx = e.clientX - rect.left;
+                const my = e.clientY - rect.top;
+
+                graphNodes.forEach(n => {
+                    const dist = Math.hypot(n.x - mx, n.y - my);
+                    if (dist < n.radius + 5) {
+                        draggedNode = n;
+                    }
+                });
+            });
+
+            canvas.addEventListener('mousemove', (e) => {
+                if (draggedNode) {
+                    const rect = canvas.getBoundingClientRect();
+                    draggedNode.x = e.clientX - rect.left;
+                    draggedNode.y = e.clientY - rect.top;
+                    drawGraphScene();
+                }
+            });
+
+            canvas.addEventListener('mouseup', () => { draggedNode = null; });
+        }
+
+        function renderGraph(mode) {
+            if (!canvas) return;
+            const w = canvas.width;
+            const h = canvas.height;
+
+            graphNodes = [];
+            graphEdges = [];
+
+            if (mode === 'kickback') {
+                document.getElementById('graphRiskTag').textContent = 'CRITICAL: Collusion Kickback Ring';
+                document.getElementById('graphRiskTag').className = 'text-[10px] font-mono px-2 py-1 rounded bg-rose-500/10 text-pearl-rose border border-rose-500/30';
+
+                const p1 = { id: 1, x: w * 0.25, y: h * 0.5, radius: 18, color: '#06b6d4', label: 'Dr. Mercer (NPI)' };
+                const rx = { id: 2, x: w * 0.75, y: h * 0.5, radius: 18, color: '#a855f7', label: 'Rx Kickback Direct' };
+                
+                graphNodes.push(p1, rx);
+
+                for (let i = 0; i < 4; i++) {
+                    const pt = { id: 10 + i, x: w * 0.5, y: h * (0.2 + i * 0.2), radius: 10, color: '#10b981', label: `Pt #${101 + i}` };
+                    graphNodes.push(pt);
+                    graphEdges.push({ from: p1, to: pt, color: '#f43f5e', dashed: true });
+                    graphEdges.push({ from: pt, to: rx, color: '#f43f5e', dashed: false });
+                }
+            } else {
+                document.getElementById('graphRiskTag').textContent = 'Topology: Normal Network';
+                document.getElementById('graphRiskTag').className = 'text-[10px] font-mono px-2 py-1 rounded bg-slate-800 text-slate-400 border border-slate-700';
+
+                const p1 = { id: 1, x: w * 0.2, y: h * 0.5, radius: 16, color: '#06b6d4', label: 'Standard NPI' };
+                const pt1 = { id: 2, x: w * 0.55, y: h * 0.3, radius: 10, color: '#10b981', label: 'Patient A' };
+                const pt2 = { id: 3, x: w * 0.55, y: h * 0.7, radius: 10, color: '#10b981', label: 'Patient B' };
+                const rx1 = { id: 4, x: w * 0.85, y: h * 0.3, radius: 14, color: '#a855f7', label: 'CVS Pharmacy' };
+                const rx2 = { id: 5, x: w * 0.85, y: h * 0.7, radius: 14, color: '#a855f7', label: 'Walgreens Rx' };
+
+                graphNodes.push(p1, pt1, pt2, rx1, rx2);
+                graphEdges.push(
+                    { from: p1, to: pt1, color: '#334155', dashed: false },
+                    { from: p1, to: pt2, color: '#334155', dashed: false },
+                    { from: pt1, to: rx1, color: '#334155', dashed: false },
+                    { from: pt2, to: rx2, color: '#334155', dashed: false }
+                );
+            }
+
+            drawGraphScene();
+        }
+
+        function drawGraphScene() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Draw Edges
+            graphEdges.forEach(e => {
+                ctx.beginPath();
+                ctx.moveTo(e.from.x, e.from.y);
+                ctx.lineTo(e.to.x, e.to.y);
+                ctx.strokeStyle = e.color;
+                ctx.lineWidth = 2;
+                if (e.dashed) ctx.setLineDash([4, 4]);
+                else ctx.setLineDash([]);
+                ctx.stroke();
+            });
+
+            // Draw Nodes
+            graphNodes.forEach(n => {
+                ctx.beginPath();
+                ctx.arc(n.x, n.y, n.radius, 0, Math.PI * 2);
+                ctx.fillStyle = n.color;
+                ctx.fill();
+                ctx.strokeStyle = '#0f172a';
+                ctx.lineWidth = 2.5;
+                ctx.stroke();
+
+                ctx.fillStyle = '#94a3b8';
+                ctx.font = '10px Plus Jakarta Sans';
+                ctx.textAlign = 'center';
+                ctx.fillText(n.label, n.x, n.y + n.radius + 12);
+            });
+        }
+    </script>
+</body>
+</html>
